@@ -2,16 +2,14 @@ package cn.localhost01;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 public class Program {
 
@@ -28,13 +26,15 @@ public class Program {
         ipText.setText(defaultText);
         ipText.setFont(new Font("宋体", 0, 12));
 
+        JRadioButton jRadioButton = new JRadioButton("导出到文件");
+
         JButton jButton = new JButton("一键转换");
         jButton.setFont(new Font("宋体", 0, 12));
 
         final JTextArea outText = new JTextArea(27, 40);
         outText.setFont(new Font("宋体", 0, 12));
 
-        JLabel jLabel = new JLabel("Trip：为运行流畅，尽量将IP相差量保持在C、D段！");
+        JLabel jLabel = new JLabel("Trip：若处理内容较多，推荐选择“导出到文件”！ ");
         jLabel.setFont(new Font("宋体", 0, 12));
 
         ipText.addFocusListener(new FocusListener() {
@@ -50,7 +50,19 @@ public class Program {
             }
         });
 
-        jButton.addActionListener((e) -> {
+        jButton.addActionListener((ActionEvent e) -> {
+
+            if (jRadioButton.isSelected()) {
+                file = new File("out.txt");
+                if (!file.exists()) {
+                    try {
+                        file.createNewFile();
+                    } catch (IOException ignore) {
+                        JOptionPane.showMessageDialog(jFrame, "创建文件失败！");
+                        return;
+                    }
+                }
+            }
 
             String[] ipRangeArray = ipText.getText().split("\n");
 
@@ -62,17 +74,30 @@ public class Program {
             }
 
             try {
+                OutputStream ops = null;
+                if (file != null)
+                    ops = new FileOutputStream(file);
+
                 for (Future<String[]> ft : futureList) {
                     String[] batchResult = ft.get();
-                    for (String result : batchResult)
-                        outText.append(result);
+                    for (String result : batchResult) {
+                        if (ops != null)
+                            ops.write(result.getBytes());
+                        else
+                            outText.append(result);
+                    }
                 }
-            } catch (Exception ignore) {
-                JOptionPane.showMessageDialog(jFrame, "error！");
+                if (ops != null)
+                    ops.close();
+            } catch (IOException ignore) {//out put to file exception
+            } catch (InterruptedException | ExecutionException ignore) {
+                JOptionPane.showMessageDialog(jFrame, "程序运行错误！");
                 return;
             }
 
-            JOptionPane.showMessageDialog(jFrame, "finished！");
+            if (jRadioButton.isSelected())
+                outText.setText("---output to out.txt---");
+            JOptionPane.showMessageDialog(jFrame, "完成！");
             Toolkit.getDefaultToolkit().beep();
 
         });
@@ -80,6 +105,7 @@ public class Program {
         JPanel jPanel = new JPanel(new FlowLayout());
         jPanel.add(jLabel);
         jPanel.add(jButton);
+        jPanel.add(jRadioButton);
 
         JPanel jPanel2 = new JPanel(new FlowLayout());
         jPanel2.add(new JScrollPane(ipText));
@@ -101,6 +127,8 @@ public class Program {
 
     private final static long[] BIT_256 = new long[] { 256 * 256 * 256, 256 * 256, 256, 1 };
 
+    private static File file;
+
     private static ExecutorService pool4IpArray = Executors.newFixedThreadPool(100);
     private static ExecutorService pool4SingleIp = Executors.newFixedThreadPool(50);
 
@@ -121,7 +149,7 @@ public class Program {
 
         //1.检查ip是否合乎规范
         if (!ipRange.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3} +\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"))
-            return null;//IP段格式不正确！
+            return new String[0];//IP段格式不正确！
 
         String[] ips = ipRange.split(" +");
 
