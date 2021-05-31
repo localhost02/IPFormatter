@@ -21,7 +21,7 @@ public class Program {
 
         final JFrame jFrame = new JFrame("IP段整理工具 By localhost01");
 
-        final String defaultText = "[10.12.23.45 10.12.255.255] or [10.12.23.45/16]";
+        final String defaultText = "10.12.23.45 10.12.255.255\n10.12.23.45/16";
         final JTextArea ipText = new JTextArea(27, 40);
         ipText.setText(defaultText);
         ipText.setFont(new Font("宋体", 0, 12));
