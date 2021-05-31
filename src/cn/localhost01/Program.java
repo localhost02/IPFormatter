@@ -21,7 +21,7 @@ public class Program {
 
         final JFrame jFrame = new JFrame("IP段整理工具 By localhost01");
 
-        final String defaultText = "10.12.23.45 10.12.255.255";
+        final String defaultText = "[10.12.23.45 10.12.255.255] or [10.12.23.45/16]";
         final JTextArea ipText = new JTextArea(27, 40);
         ipText.setText(defaultText);
         ipText.setFont(new Font("宋体", 0, 12));
@@ -40,13 +40,11 @@ public class Program {
         ipText.addFocusListener(new FocusListener() {
 
             @Override public void focusLost(FocusEvent e) {
-                if ("".equals(ipText.getText()))
-                    ipText.setText(defaultText);
+                if ("".equals(ipText.getText())) ipText.setText(defaultText);
             }
 
             @Override public void focusGained(FocusEvent e) {
-                if (defaultText.equals(ipText.getText()))
-                    ipText.setText("");
+                if (defaultText.equals(ipText.getText())) ipText.setText("");
             }
         });
 
@@ -75,28 +73,23 @@ public class Program {
 
             try {
                 OutputStream ops = null;
-                if (file != null)
-                    ops = new FileOutputStream(file);
+                if (file != null) ops = new FileOutputStream(file);
 
                 for (Future<String[]> ft : futureList) {
                     String[] batchResult = ft.get();
                     for (String result : batchResult) {
-                        if (ops != null)
-                            ops.write(result.getBytes());
-                        else
-                            outText.append(result);
+                        if (ops != null) ops.write(result.getBytes());
+                        else outText.append(result);
                     }
                 }
-                if (ops != null)
-                    ops.close();
+                if (ops != null) ops.close();
             } catch (IOException ignore) {//out put to file exception
             } catch (InterruptedException | ExecutionException ignore) {
                 JOptionPane.showMessageDialog(jFrame, "程序运行错误！");
                 return;
             }
 
-            if (jRadioButton.isSelected())
-                outText.setText("---output to out.txt---");
+            if (jRadioButton.isSelected()) outText.setText("---output to out.txt---");
             JOptionPane.showMessageDialog(jFrame, "完成！");
             Toolkit.getDefaultToolkit().beep();
 
@@ -125,7 +118,7 @@ public class Program {
         UIManager.setLookAndFeel("com.sun.java.swing.plaf.motif.MotifLookAndFeel");
     }
 
-    private final static long[] BIT_256 = new long[] { 256 * 256 * 256, 256 * 256, 256, 1 };
+    private final static long[] BIT_256 = new long[] {256 * 256 * 256, 256 * 256, 256, 1};
 
     private static File file;
 
@@ -136,16 +129,20 @@ public class Program {
      * Description: 为指定IP段生成IP列表<BR>
      *
      * @param ipRange ip段，格式应为：xxx.xxx.xxx.xxx yyy.yyy.yyy.yyy，中间为任意多个空格隔开
-     *
      * @return String[] 防止生成的ip过多导致内存溢出，使用数组分批保存
-     *
      * @throws Exception
      * @author ran.chunlin
      * @date 2018/1/5 20:11
      * @version 1.0
      */
     private static String[] format(String ipRange) {
+        //0.兼容ip+掩码格式
         ipRange = ipRange == null ? "" : ipRange.trim();
+        if (ipRange.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/\\d+")) {
+            String[] ipAndMask = ipRange.split("/");
+            ipRange = IpUtil.getBeginIpStr(ipAndMask[0], ipAndMask[1]) + " " + IpUtil
+                    .getEndIpStr(ipAndMask[0], ipAndMask[1]);
+        }
 
         //1.检查ip是否合乎规范
         if (!ipRange.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3} +\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"))
@@ -169,8 +166,7 @@ public class Program {
 
         int period = 255 * 255;
         int batch = (int) ((afterIPSum - beforeIPSum) / period + ((afterIPSum - beforeIPSum) % period == 0 ? 0 : 1));
-        if (batch < 1)
-            return new String[0];
+        if (batch < 1) return new String[0];
 
         for (long i = 0; i < batch; i++) {
             future = pool4SingleIp.submit(new doSingleIP(beforeIPSum + i * period + 1,
